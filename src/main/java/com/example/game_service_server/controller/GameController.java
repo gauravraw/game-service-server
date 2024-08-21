@@ -27,7 +27,7 @@ public class GameController {
 
     private final GameService gameService;
 
-    @PostMapping("/save/player-details")
+    @PostMapping("/save/player")
     public ResponseEntity<BaseResponse<List<PlayerDetailsResponse>>> savePlayerDetails(
             @RequestParam("x-request-id") String requestId,
             @Valid @RequestBody List<PlayerDetailsRequest> playerDetailsRequestList) {
@@ -46,7 +46,7 @@ public class GameController {
         return ResponseEntity.ok(BaseResponse.<String> builder().success(true).data(successMessage).build());
     }
 
-    @GetMapping("/top-score")
+    @GetMapping("/top/score")
     public ResponseEntity<BaseResponse<List<TopScoresEntity>>> getTopScore(
             @RequestParam("x-request-id") String requestId,
             @RequestParam(value = "numberOfRecords", required = false, defaultValue = "5") int numberOfRecords,
