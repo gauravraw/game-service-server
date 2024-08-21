@@ -1,10 +1,13 @@
 package com.example.game_service_server.controller;
 
 import com.example.game_service_server.entity.TopScoresEntity;
-import com.example.game_service_server.non_entity.request.FileData;
+import com.example.game_service_server.enums.ErrorCode;
+import com.example.game_service_server.exception.GameServiceException;
+import com.example.game_service_server.non_entity.request.PlayerScore;
 import com.example.game_service_server.non_entity.request.PlayerDetailsRequest;
 import com.example.game_service_server.non_entity.response.BaseResponse;
 import com.example.game_service_server.non_entity.response.PlayerDetailsResponse;
+import com.example.game_service_server.non_entity.response.ScoreAdditionResponse;
 import com.example.game_service_server.service.GameService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +30,7 @@ public class GameController {
 
     private final GameService gameService;
 
-    @PostMapping("/save/player")
+    @PostMapping("/save/players")
     public ResponseEntity<BaseResponse<List<PlayerDetailsResponse>>> savePlayerDetails(
             @RequestParam("x-request-id") String requestId,
             @Valid @RequestBody List<PlayerDetailsRequest> playerDetailsRequestList) {
@@ -39,11 +42,11 @@ public class GameController {
     }
 
     @PostMapping("/save/scores")
-    public ResponseEntity<BaseResponse<String>> saveScores(@RequestParam("x-request-id") String requestId,
-            @RequestParam("file") MultipartFile multipartFile) {
-        List<FileData> fileDataList = readFile(multipartFile);
-        String successMessage = gameService.addScores(fileDataList, requestId);
-        return ResponseEntity.ok(BaseResponse.<String> builder().success(true).data(successMessage).build());
+    public ResponseEntity<BaseResponse<ScoreAdditionResponse>> saveScores(@RequestParam("x-request-id") String requestId,
+                                                                          @RequestParam("file") MultipartFile multipartFile) {
+        List<PlayerScore> playerScoreList = readFile(multipartFile);
+        ScoreAdditionResponse scoreAdditionResponse = gameService.addScores(playerScoreList, requestId);
+        return ResponseEntity.ok(BaseResponse.<ScoreAdditionResponse> builder().success(true).data(scoreAdditionResponse).build());
     }
 
     @GetMapping("/top/score")
@@ -51,6 +54,9 @@ public class GameController {
             @RequestParam("x-request-id") String requestId,
             @RequestParam(value = "numberOfRecords", required = false, defaultValue = "5") int numberOfRecords,
             @RequestParam(value = "orderByDesc", required = false, defaultValue = "true") boolean orderByDesc) {
+        if(numberOfRecords <= 0){
+            throw new GameServiceException(ErrorCode.INVALID_REQUEST);
+        }
         List<TopScoresEntity> scoresEntityList = gameService.findTopNPlayersByScores(numberOfRecords, orderByDesc,
                 requestId);
 

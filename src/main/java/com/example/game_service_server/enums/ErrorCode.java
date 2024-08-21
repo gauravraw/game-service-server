@@ -10,7 +10,8 @@ public enum ErrorCode {
     UNABLE_TO_READ_FILE(108434, "Unable to read file"),
     UNABLE_TO_SAVE_SCORE(108435,
             "Unable to save scores for any playerId. Please add them before registering-their scores"),
-    UNABLE_TO_PROCESS_KAFKA_RECORD(108436, "Unable to process kafka record");
+    UNABLE_TO_PROCESS_KAFKA_RECORD(108436, "Unable to process kafka record"),
+    INVALID_REQUEST(108437, "Invalid request");
 
     @Getter
     private final String errorMsg;

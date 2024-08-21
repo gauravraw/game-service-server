@@ -8,9 +8,10 @@ import com.example.game_service_server.entity.TopScoresEntity;
 import com.example.game_service_server.enums.ErrorCode;
 import com.example.game_service_server.enums.PlayerStatus;
 import com.example.game_service_server.exception.GameServiceException;
-import com.example.game_service_server.non_entity.request.FileData;
+import com.example.game_service_server.non_entity.request.PlayerScore;
 import com.example.game_service_server.non_entity.request.PlayerDetailsRequest;
 import com.example.game_service_server.non_entity.response.PlayerDetailsResponse;
+import com.example.game_service_server.non_entity.response.ScoreAdditionResponse;
 import com.example.game_service_server.repository.PlayerDetailsRepository;
 import com.example.game_service_server.repository.ScoreDetailsRepository;
 import com.example.game_service_server.service.impl.GameServiceImpl;
@@ -97,19 +98,6 @@ public class GameServiceImplTest {
 
         assertEquals(0, responses.size());
     }
-    @Test
-    void testAddPlayers_EmptyName() {
-        String requestId = "request-123";
-        List<PlayerDetailsRequest> requests = Collections.singletonList(
-                new PlayerDetailsRequest("", "TeamA", "ACTIVE")
-        );
-
-        GameServiceException thrown = assertThrows(GameServiceException.class, () -> {
-            gameService.addPlayers(requestId, requests);
-        });
-        assertEquals(ErrorCode.EMPTY_NAME.getCode(), thrown.getCode());
-        assertEquals(ErrorCode.EMPTY_NAME.getErrorMsg() , thrown.getErrorMsg());
-    }
 
     @Test
     void testAddPlayer_UnableToAddException(){
@@ -129,9 +117,9 @@ public class GameServiceImplTest {
     @Test
     void testAddScores_Success() {
         String requestId = "request-123";
-        List<FileData> fileDataList = Arrays.asList(
-                new FileData(1,"Test-1" , 100),
-                new FileData(2, "Test-2" , 200)
+        List<PlayerScore> playerScoreList = Arrays.asList(
+                new PlayerScore(1,"Test-1" , 100),
+                new PlayerScore(2, "Test-2" , 200)
         );
         Set<Integer> existingPlayerIds = new HashSet<>(Arrays.asList(1, 2));
         Map<Integer, Integer> playerIdScoreMap = Map.of(1, 100, 2, 200);
@@ -145,23 +133,23 @@ public class GameServiceImplTest {
         when(scoreDetailsRepository.findByPlayerId(2)).thenReturn(Optional.empty());
         when(scoreDetailsRepository.saveAll(any())).thenReturn(scoreEntities);
 
-        String result = gameService.addScores(fileDataList, requestId);
+        ScoreAdditionResponse scoreAdditionResponse = gameService.addScores(playerScoreList, requestId);
 
-        assertTrue(result.contains("Successfully updated scores for playerId ->  1,2,"));
+        assertEquals(2, scoreAdditionResponse.getProcessedPlayerIds().size());
     }
 
     @Test
     void testAddScores_NoExistingPlayer() {
         String requestId = "request-123";
-        List<FileData> fileDataList = Collections.singletonList(
-                new FileData(1, "test", 100)
+        List<PlayerScore> playerScoreList = Collections.singletonList(
+                new PlayerScore(1, "test", 100)
         );
         Set<Integer> nonExistingPlayerIds = new HashSet<>(Collections.singletonList(1));
 
         when(playerDetailsRepository.existsById(anyInt())).thenReturn(false);
 
         GameServiceException thrown = assertThrows(GameServiceException.class, () -> {
-            gameService.addScores(fileDataList, requestId);
+            gameService.addScores(playerScoreList, requestId);
         });
         assertEquals(ErrorCode.UNABLE_TO_SAVE_SCORE.getCode(), thrown.getCode());
         assertEquals(ErrorCode.UNABLE_TO_SAVE_SCORE.getErrorMsg(), thrown.getErrorMsg());
@@ -170,9 +158,9 @@ public class GameServiceImplTest {
     @Test
     void testNonExistingPlayerTest(){
         String requestId = "request-123";
-        List<FileData> fileDataList = List.of(
-                new FileData(1, "test", 100),
-                new FileData(2, "test", 100)
+        List<PlayerScore> playerScoreList = List.of(
+                new PlayerScore(1, "test", 100),
+                new PlayerScore(2, "test", 100)
         );
         Set<Integer> nonExistingPlayerIds = new HashSet<>(Collections.singletonList(1));
 
@@ -185,17 +173,17 @@ public class GameServiceImplTest {
 
         when(scoreDetailsRepository.saveAll(any())).thenReturn(scoreEntities);
 
-        String message = gameService.addScores(fileDataList, requestId);
+        ScoreAdditionResponse scoreAdditionResponse = gameService.addScores(playerScoreList, requestId);
 
-        assertEquals(message , "Successfully updated scores for playerId ->  1,. Unable to update score for following playerId -> 2,as these players doesn't exist");
+        assertEquals(1 , scoreAdditionResponse.getProcessedPlayerIds().size());
     }
 
     @Test
     void testAddScores_UnableToAddScoreTest() {
         // Arrange
         String requestId = "request-123";
-        List<FileData> fileDataList = Collections.singletonList(
-                new FileData(1, "test", 100)
+        List<PlayerScore> playerScoreList = Collections.singletonList(
+                new PlayerScore(1, "test", 100)
         );
         Set<Integer> nonExistingPlayerIds = new HashSet<>(Collections.singletonList(1));
 
@@ -203,7 +191,7 @@ public class GameServiceImplTest {
 
         // Act & Assert
         GameServiceException thrown = assertThrows(GameServiceException.class, () -> {
-            gameService.addScores(fileDataList, requestId);
+            gameService.addScores(playerScoreList, requestId);
         });
         assertEquals(ErrorCode.UNABLE_TO_SAVE_RECORDS.getCode(), thrown.getCode());
         assertEquals(ErrorCode.UNABLE_TO_SAVE_RECORDS.getErrorMsg(), thrown.getErrorMsg());

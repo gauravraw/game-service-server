@@ -2,7 +2,7 @@ package com.example.game_service_server.utils;
 
 import com.example.game_service_server.enums.ErrorCode;
 import com.example.game_service_server.exception.GameServiceException;
-import com.example.game_service_server.non_entity.request.FileData;
+import com.example.game_service_server.non_entity.request.PlayerScore;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,18 +13,21 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @UtilityClass
 @Slf4j
 public class CommonUtils {
 
-    public static List<FileData> readFile(MultipartFile multipartFile) {
+    public static final Set<String> ALLOWED_EXTENSIONS = Set.of("txt", "csv");
+
+    public static List<PlayerScore> readFile(MultipartFile multipartFile) {
         try {
             InputStream inputStream = multipartFile.getInputStream();
 
             String line;
 
-            List<FileData> dataList = new ArrayList<>();
+            List<PlayerScore> dataList = new ArrayList<>();
 
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
@@ -35,7 +38,7 @@ public class CommonUtils {
 
             while ((line = bufferedReader.readLine()) != null) {
                 String[] data = line.split(",");
-                dataList.add(FileData.builder().playerId(Integer.parseInt(data[1])).score(Integer.parseInt(data[3]))
+                dataList.add(PlayerScore.builder().playerId(Integer.parseInt(data[1])).score(Integer.parseInt(data[3]))
                         .playerName(data[2]).build());
             }
 
@@ -46,5 +49,10 @@ public class CommonUtils {
             log.error("Error occurred while reading file ", ioException);
             throw new GameServiceException(ErrorCode.UNABLE_TO_READ_FILE);
         }
+    }
+
+    public static void validateFile(MultipartFile multipartFile) {
+        // TODO :: check file with validations
+
     }
 }

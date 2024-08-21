@@ -6,13 +6,13 @@ import com.example.game_service_server.entity.TopScoresEntity;
 import com.example.game_service_server.enums.ErrorCode;
 import com.example.game_service_server.enums.PlayerStatus;
 import com.example.game_service_server.exception.GameServiceException;
-import com.example.game_service_server.non_entity.request.FileData;
+import com.example.game_service_server.non_entity.request.PlayerScore;
 import com.example.game_service_server.non_entity.request.PlayerDetailsRequest;
 import com.example.game_service_server.non_entity.response.PlayerDetailsResponse;
+import com.example.game_service_server.non_entity.response.ScoreAdditionResponse;
 import com.example.game_service_server.repository.PlayerDetailsRepository;
 import com.example.game_service_server.repository.ScoreDetailsRepository;
 import com.example.game_service_server.service.GameService;
-import io.micrometer.common.util.StringUtils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,13 +37,6 @@ public class GameServiceImpl implements GameService {
         log.info("Received request for adding player details with requestId :: {}", requestId);
 
         try {
-            // check for empty name
-            playerDetailsRequestList.forEach(playerDetailsRequest -> {
-                if (StringUtils.isBlank(playerDetailsRequest.getName())) {
-                    throw new GameServiceException(ErrorCode.EMPTY_NAME);
-                }
-            });
-
             List<PlayerDetailsEntity> playerDetailsEntityList = mapPlayersDetailsListToEntity(playerDetailsRequestList);
             if (playerDetailsEntityList.isEmpty()) {
                 log.info("Empty request for saving player details in db");
@@ -53,11 +46,12 @@ public class GameServiceImpl implements GameService {
             List<PlayerDetailsEntity> savedPlayerEntitiesList = playerDetailsRepository
                     .saveAll(playerDetailsEntityList);
             log.info("Saved {} playerDetails into database", savedPlayerEntitiesList.size());
+            // TODO :: Currently player id is returned as auto generated serial number. But can be replaced with custom
+            // logic
             return mapPlayerDetailsResponse(savedPlayerEntitiesList);
-        } catch (GameServiceException gameServiceException) {
-            log.error("Error occurred while saving records in db ", gameServiceException);
-            throw gameServiceException;
-        } catch (Exception exception) {
+        }
+        // TODO :: Catch SQL exception separately
+        catch (Exception exception) {
             log.error("Error occurred while saving records in db ", exception);
             throw new GameServiceException(ErrorCode.UNABLE_TO_SAVE_RECORDS);
         }
@@ -65,12 +59,15 @@ public class GameServiceImpl implements GameService {
 
     @Override
     @Transactional
-    public String addScores(List<FileData> fileDataList, String requestId) {
+    public ScoreAdditionResponse addScores(List<PlayerScore> playerScoreList, String requestId) {
 
         log.info("Received request for adding scores for players in database with requestId :: {}", requestId);
 
         try {
-            Set<Integer> playerIdSet = fileDataList.stream().map(FileData::getPlayerId).collect(Collectors.toSet());
+
+            // TODO :: Can be improved via foreign key logic.
+            Set<Integer> playerIdSet = playerScoreList.stream().map(PlayerScore::getPlayerId)
+                    .collect(Collectors.toSet());
             Set<Integer> nonExistingPlayerIdSet = getNonExistingPlayerIdSet(playerIdSet);
 
             if (nonExistingPlayerIdSet.size() == playerIdSet.size()) {
@@ -79,7 +76,7 @@ public class GameServiceImpl implements GameService {
             }
 
             // add scores logic
-            Map<Integer, Integer> playerIdScoreMap = getExistingPlayerScoreMap(fileDataList, nonExistingPlayerIdSet);
+            Map<Integer, Integer> playerIdScoreMap = getExistingPlayerScoreMap(playerScoreList, nonExistingPlayerIdSet);
             List<ScoreDetailsEntity> scoreDetailsEntityList = new ArrayList<>();
             playerIdScoreMap.forEach((playerId, score) -> {
                 // check if score details repository already has their records
@@ -97,23 +94,9 @@ public class GameServiceImpl implements GameService {
             List<ScoreDetailsEntity> updatedScoreEntityList = scoreDetailsRepository.saveAll(scoreDetailsEntityList);
             log.info("Successfully saved {} records in database", updatedScoreEntityList.size());
 
-            StringBuilder successMessageBuilder = new StringBuilder();
-            if (!updatedScoreEntityList.isEmpty()) {
-                successMessageBuilder.append("Successfully updated scores for playerId ->  ");
-                updatedScoreEntityList.forEach(scoreDetailsEntity -> {
-                    successMessageBuilder.append(scoreDetailsEntity.getPlayerId()).append(",");
-                });
-            }
-            if (!nonExistingPlayerIdSet.isEmpty()) {
-                successMessageBuilder.append(". Unable to update score for following playerId -> ");
-                nonExistingPlayerIdSet.forEach(playerId -> {
-                    successMessageBuilder.append(playerId).append(",");
-                });
-
-                successMessageBuilder.append("as these players doesn't exist");
-            }
-
-            return successMessageBuilder.toString();
+            List<Integer> processedPlayerIds = updatedScoreEntityList.stream().map(ScoreDetailsEntity::getPlayerId)
+                    .collect(Collectors.toList());
+            return ScoreAdditionResponse.builder().processedPlayerIds(processedPlayerIds).build();
         } catch (GameServiceException exception) {
             log.error("Error occurred while saving player score details", exception);
             throw exception;
@@ -127,17 +110,17 @@ public class GameServiceImpl implements GameService {
     public List<TopScoresEntity> findTopNPlayersByScores(int numberOfRecords, boolean orderByDesc, String requestId) {
 
         log.info("Received request to fetch top {} players from db with requestId :: {}", numberOfRecords, requestId);
-        ;
+
         if (orderByDesc) {
             return scoreDetailsRepository.findTopNPlayersByScoreDesc(numberOfRecords);
         }
         return scoreDetailsRepository.findTopNPlayersByScoreAsc(numberOfRecords);
     }
 
-    private static Map<Integer, Integer> getExistingPlayerScoreMap(List<FileData> fileDataList,
+    private static Map<Integer, Integer> getExistingPlayerScoreMap(List<PlayerScore> playerScoreList,
             Set<Integer> nonExistingPlayerIdSet) {
         Map<Integer, Integer> playerIdScoreMap = new HashMap<>();
-        fileDataList.stream().filter(fileData -> !nonExistingPlayerIdSet.contains(fileData.getPlayerId()))
+        playerScoreList.stream().filter(fileData -> !nonExistingPlayerIdSet.contains(fileData.getPlayerId()))
                 .forEach(fileData -> {
                     playerIdScoreMap.put(fileData.getPlayerId(),
                             playerIdScoreMap.getOrDefault(fileData.getPlayerId(), 0) + fileData.getScore());

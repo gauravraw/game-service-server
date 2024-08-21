@@ -2,9 +2,8 @@ package com.example.game_service_server.listener;
 
 import com.example.game_service_server.enums.ErrorCode;
 import com.example.game_service_server.exception.GameServiceException;
-import com.example.game_service_server.non_entity.request.FileData;
+import com.example.game_service_server.non_entity.request.PlayerScore;
 import com.example.game_service_server.service.GameService;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,12 +28,12 @@ public class KafkaConsumerListener {
         try {
             log.info("Received kafka message as :: {}", message);
             log.info("Mapping kafka object to custom object class");
-            List<FileData> fileDataList = objectMapper.readValue(message, new TypeReference<>() {
-            });
-            log.info("Successfully mapped kafka message to data of {} size", fileDataList.size());
-            log.info("Sending data for processing");
-            String requestId = UUID.randomUUID().toString();
-            gameService.addScores(fileDataList, requestId);
+            PlayerScore playerScore = objectMapper.readValue(message, PlayerScore.class);
+            if(playerScore!= null){
+                log.info("Sending data for processing");
+                String requestId = UUID.randomUUID().toString();
+                gameService.addScores(List.of(playerScore), requestId);
+            }
         } catch (GameServiceException gameServiceException) {
             log.error("Error occurred while processing kafka message", gameServiceException);
             throw gameServiceException;
