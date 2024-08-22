@@ -5,6 +5,7 @@ import com.example.game_service_server.exception.GameServiceException;
 import com.example.game_service_server.non_entity.request.PlayerScore;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
@@ -15,14 +16,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import static com.example.game_service_server.constants.ApplicationConstant.ALLOWED_EXTENSIONS;
+
 @UtilityClass
 @Slf4j
 public class CommonUtils {
 
-    public static final Set<String> ALLOWED_EXTENSIONS = Set.of("txt", "csv");
-
     public static List<PlayerScore> readFile(MultipartFile multipartFile) {
         try {
+            validateFile(multipartFile);
             InputStream inputStream = multipartFile.getInputStream();
 
             String line;
@@ -45,6 +47,9 @@ public class CommonUtils {
             log.info("Read file successfully");
 
             return dataList;
+        } catch (GameServiceException gameServiceException) {
+            log.error("Error occurred while reading file ", gameServiceException);
+            throw gameServiceException;
         } catch (IOException ioException) {
             log.error("Error occurred while reading file ", ioException);
             throw new GameServiceException(ErrorCode.UNABLE_TO_READ_FILE);
@@ -53,6 +58,15 @@ public class CommonUtils {
 
     public static void validateFile(MultipartFile multipartFile) {
         // TODO :: check file with validations
+        if (!ALLOWED_EXTENSIONS.contains(FilenameUtils.getExtension(multipartFile.getOriginalFilename()))) {
+            log.error("Invalid file extension for fileName :: {}", multipartFile.getOriginalFilename());
+            throw new GameServiceException(ErrorCode.INVALID_FILE_EXTENSION);
+        }
+        // validate empty file
+        if (multipartFile.isEmpty()) {
+            log.error("Invalid file extension for fileName :: {}", multipartFile.getOriginalFilename());
+            throw new GameServiceException(ErrorCode.INVALID_FILE);
+        }
 
     }
 }

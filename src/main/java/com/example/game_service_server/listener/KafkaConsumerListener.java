@@ -29,7 +29,7 @@ public class KafkaConsumerListener {
             log.info("Received kafka message as :: {}", message);
             log.info("Mapping kafka object to custom object class");
             PlayerScore playerScore = objectMapper.readValue(message, PlayerScore.class);
-            if(playerScore!= null){
+            if (playerScore != null) {
                 log.info("Sending data for processing");
                 String requestId = UUID.randomUUID().toString();
                 gameService.addScores(List.of(playerScore), requestId);

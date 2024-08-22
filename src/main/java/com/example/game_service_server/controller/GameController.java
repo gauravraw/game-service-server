@@ -42,11 +42,12 @@ public class GameController {
     }
 
     @PostMapping("/save/scores")
-    public ResponseEntity<BaseResponse<ScoreAdditionResponse>> saveScores(@RequestParam("x-request-id") String requestId,
-                                                                          @RequestParam("file") MultipartFile multipartFile) {
+    public ResponseEntity<BaseResponse<ScoreAdditionResponse>> saveScores(
+            @RequestParam("x-request-id") String requestId, @RequestParam("file") MultipartFile multipartFile) {
         List<PlayerScore> playerScoreList = readFile(multipartFile);
         ScoreAdditionResponse scoreAdditionResponse = gameService.addScores(playerScoreList, requestId);
-        return ResponseEntity.ok(BaseResponse.<ScoreAdditionResponse> builder().success(true).data(scoreAdditionResponse).build());
+        return ResponseEntity
+                .ok(BaseResponse.<ScoreAdditionResponse> builder().success(true).data(scoreAdditionResponse).build());
     }
 
     @GetMapping("/top/score")
@@ -54,7 +55,7 @@ public class GameController {
             @RequestParam("x-request-id") String requestId,
             @RequestParam(value = "numberOfRecords", required = false, defaultValue = "5") int numberOfRecords,
             @RequestParam(value = "orderByDesc", required = false, defaultValue = "true") boolean orderByDesc) {
-        if(numberOfRecords <= 0){
+        if (numberOfRecords <= 0) {
             throw new GameServiceException(ErrorCode.INVALID_REQUEST);
         }
         List<TopScoresEntity> scoresEntityList = gameService.findTopNPlayersByScores(numberOfRecords, orderByDesc,

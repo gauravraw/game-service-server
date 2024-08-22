@@ -11,7 +11,9 @@ public enum ErrorCode {
     UNABLE_TO_SAVE_SCORE(108435,
             "Unable to save scores for any playerId. Please add them before registering-their scores"),
     UNABLE_TO_PROCESS_KAFKA_RECORD(108436, "Unable to process kafka record"),
-    INVALID_REQUEST(108437, "Invalid request");
+    INVALID_REQUEST(108437, "Invalid request"),
+    INVALID_FILE_EXTENSION(108438, "Invalid file extension . Allowed extension is .txt and .csv"),
+    INVALID_FILE(108439, "Empty file received");
 
     @Getter
     private final String errorMsg;
